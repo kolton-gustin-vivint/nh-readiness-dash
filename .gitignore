@@ -1,0 +1,13 @@
+node_modules
+.next
+.vercel
+dist
+*.tsbuildinfo
+
+# Local secrets. .env holds AIRTABLE_API_KEY and (later) NPM_AUTH_TOKEN.
+.env
+.env.*
+!.env.example
+
+# Written by the preinstall script from NPM_AUTH_TOKEN.
+.npmrc
