@@ -84,7 +84,6 @@ export default function MyReadiness() {
 
       <SectionHeading>My progress</SectionHeading>
 
-      <LicensingCard licensing={readiness.licensing} />
       <CoursesCards courses={readiness.courses} />
       <AssessmentsCard
         assessments={readiness.assessments}
@@ -115,7 +114,6 @@ export default function MyReadiness() {
           <Card>
             <p className="card-label">Experience areas</p>
             <p className="card-value">{experience.experienceAreas.length}</p>
-            <p className="card-note">Areas you have worked in so far.</p>
             <CountList items={experience.experienceAreas} emptyMessage="No experience areas recorded yet." />
             {experience.missingAreas > 0 ? (
               <p className="card-note">
@@ -148,6 +146,11 @@ export default function MyReadiness() {
         </>
       ) : null}
 
+      {/* Last, deliberately. Licensing is not a readiness requirement (see
+          LicensingCard), and two thirds of pros have no record, so it would
+          otherwise lead the page with a grey "Not on file" that means nothing. */}
+      <LicensingCard licensing={readiness.licensing} />
+
       <ActionBar action={readiness.nextAction} />
     </Shell>
   );
@@ -164,7 +167,18 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function LicensingCard({ licensing }: { licensing: Readiness['licensing'] }) {
   if (!licensing.length) {
-    return <StatusCard label="Licensing" value="Not on file" note="No licence record is linked to you yet." />;
+    // Governance: "Licensing is not a requirement, as we don't want to delay
+    // assessing readiness." So this is deliberately neutral and final — no
+    // "yet", which reads as something the pro is waiting on. Licensing is
+    // intentionally absent from nextAction.ts and readiness.ts for the same
+    // reason: it must never produce a due action or hold back a decision.
+    return (
+      <StatusCard
+        label="Licensing"
+        value="Not on file"
+        note="No licence on record. This does not affect your readiness."
+      />
+    );
   }
 
   // Any non-active licence is the headline, because that is the one that
@@ -211,7 +225,6 @@ function CoursesCards({ courses }: { courses: Readiness['courses'] }) {
           label="Other required courses"
           value={`${courses.other.length} outstanding`}
           tone="warn"
-          note="These do not match either course family by name."
         >
           <CourseList titles={courses.other} />
         </StatusCard>
@@ -234,11 +247,6 @@ function CourseGroupCard({
       label={label}
       value={complete ? 'Complete' : `${outstanding.length} outstanding`}
       tone={complete ? 'good' : 'warn'}
-      note={
-        complete
-          ? 'Nothing outstanding here.'
-          : 'These have to be finished before a readiness decision can be made.'
-      }
     >
       {complete ? null : <CourseList titles={outstanding} />}
     </StatusCard>
@@ -322,13 +330,9 @@ function WorkOrdersCard({
       label="Work order experience"
       value={finished ? 'Programme complete' : met ? 'Minimums met' : 'In progress'}
       tone={finished ? 'neutral' : met ? 'good' : 'info'}
-      note={
-        finished
-          ? 'Kept for your record.'
-          : met
-            ? 'You have logged enough install and service work orders.'
-            : `You still need ${workOrders.shortfall} work orders logged.`
-      }
+      // Only the shortfall is kept: it is a number the pro has to act on.
+      // "Minimums met" and "Programme complete" already say it in the value.
+      note={finished || met ? undefined : `You still need ${workOrders.shortfall} work orders logged.`}
     >
       <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
         <Stat label="Install" value={workOrders.install} />
@@ -345,7 +349,6 @@ function FocusCard({ focus }: { focus: Readiness['focusThisWeek'] }) {
       <StatusCard
         label="Focus for this week"
         value="Not set yet"
-        note="Your FSM sets this at your weekly check-in."
       />
     );
   }

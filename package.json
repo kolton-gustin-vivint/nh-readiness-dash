@@ -12,7 +12,8 @@
     "schema:generate": "tsx --env-file=.env scripts/generate-airtable-schema.ts",
     "auth:check": "tsx --env-file=.env scripts/check-eml-gate.ts",
     "smoke": "tsx --env-file=.env scripts/smoke.ts",
-    "email:match": "tsx --env-file=.env scripts/check-email-match-rate.ts"
+    "email:match": "tsx --env-file=.env scripts/check-email-match-rate.ts",
+    "licensing:check": "tsx --env-file=.env scripts/check-licensing.ts"
   },
   "dependencies": {
     "@FO-Enablement-Vivint/magistrate": "^1.0.6",
