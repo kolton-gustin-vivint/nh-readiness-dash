@@ -15,6 +15,7 @@
     "email:match": "tsx --env-file=.env scripts/check-email-match-rate.ts"
   },
   "dependencies": {
+    "@FO-Enablement-Vivint/magistrate": "^1.0.6",
     "next": "^16.3.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

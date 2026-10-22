@@ -44,10 +44,21 @@ export async function callEndpoint<N extends EndpointName>(name: N, input?: Inpu
     } catch {
       /* non-JSON error body */
     }
-    // 401 means no session; 403 means a session with no matching EML record.
-    // Both are shown to the user as text rather than a blank page — see
-    // MyReadiness.tsx. Once Magistrate is wired up a 401 should redirect to
-    // /magistrate-auth instead.
+
+    // 401 means the session is missing or has expired — Magistrate sessions
+    // are fixed at 8 hours and there is no refresh — so send them to sign in
+    // and come back. `next_page` matches what the package's own redirect uses.
+    //
+    // 403 is different and must NOT redirect: it means a valid session whose
+    // email matches no EML record. Bouncing that to sign-in would loop,
+    // because signing in again cannot change the outcome. It is surfaced as
+    // text instead.
+    if (res.status === 401 && typeof window !== 'undefined') {
+      const url = new URL(`${window.location.origin}/magistrate-auth`);
+      url.searchParams.set('next_page', window.location.origin + window.location.pathname);
+      window.location.href = url.toString();
+    }
+
     throw new ApiClientError(res.status, code, message, issues);
   }
 
