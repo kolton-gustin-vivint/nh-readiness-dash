@@ -11,9 +11,9 @@
  * the rule in one place instead of spread across card components.
  *
  * Precedence:
- *   0. Nothing, if the pro has left the programme (Historical)
+ *   0. Nothing, if the pro has left the program (Historical)
  *   1. A reassessment the pro has been assigned and not yet submitted
- *   2. The readiness self-assessment, once due
+ *   2. The readiness self-assessment, once due AND once its prerequisites are met
  *   3. Logging a work order, while the experience minimums are unmet
  *   4. Nothing — approved, or waiting on someone else
  *
@@ -40,6 +40,20 @@ export interface NextActionInput {
   selfAssessmentDue: string | null;
   selfAssessmentLink: string | null;
   selfAssessmentScore: number | null;
+  /**
+   * Whether the self-assessment form's prerequisites are met.
+   *
+   * Per Austi: the form requires Ethics and Compliance complete, ProStart
+   * complete, 10 install work orders and 6 service work orders. `Self
+   * Assessment Due` does NOT encode any of that — it returns a date from the
+   * program week alone, so it reads "due" for a pro who cannot yet submit.
+   * Offering the link anyway sends them to a form they are not eligible for.
+   *
+   * Derived from the per-family course state rather than `New Hire Training
+   * Complete`, because that field also counts a third family (Quarterly
+   * Safety Training) which is not one of the two prerequisites.
+   */
+  selfAssessmentUnlocked: boolean;
   awaitingReassessment: boolean;
   reassessmentForm: string | null;
   reassessmentCategories: string[];
@@ -50,12 +64,12 @@ export interface NextActionInput {
   /** Base Fillout URL for the WO Experience form, from WO_EXPERIENCE_FORM_URL. */
   woFormUrl: string | null;
   proRecordId: string;
-  /** `New Hire Status`. Historical means the pro has left the programme. */
+  /** `New Hire Status`. Historical means the pro has left the program. */
   stage: string | null;
 }
 
 export function resolveNextAction(i: NextActionInput): NextAction | null {
-  // 0. Out of the programme. `WO Experience Gate` keeps reading "10 install, 6
+  // 0. Out of the program. `WO Experience Gate` keeps reading "10 install, 6
   //    service" forever for someone who never logged any, so without this a
   //    pro who finished months ago is told to go and log a work order. Live on
   //    Mason Boismier (Historical, week 153).
@@ -96,10 +110,17 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
     };
   }
 
-  // 2. Self-assessment due and not yet submitted. A submitted assessment has a
-  //    score; the date alone does not prove submission, since `Self Assessment
-  //    Due` keeps returning a date after the form is in.
-  if (!approved && i.selfAssessmentDue && i.selfAssessmentScore === null) {
+  // 2. Self-assessment due, prerequisites met, and not yet submitted. A
+  //    submitted assessment has a score; the date alone does not prove
+  //    submission, since `Self Assessment Due` keeps returning a date after
+  //    the form is in.
+  //
+  //    `selfAssessmentUnlocked` must be checked here and not left to fall
+  //    through: this step sits ABOVE the work-order gate, so without it a pro
+  //    with 3 of the 16 required work orders was handed the self-assessment
+  //    link instead of being told to log work orders. Live on Tyler
+  //    Livingston at 2 install / 1 service.
+  if (!approved && i.selfAssessmentDue && i.selfAssessmentUnlocked && i.selfAssessmentScore === null) {
     return {
       label: 'Complete your readiness self-assessment',
       because: 'You have reached the point in the program where you rate your own confidence.',

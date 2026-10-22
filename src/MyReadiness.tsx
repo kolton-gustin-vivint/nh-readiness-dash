@@ -279,8 +279,14 @@ function AssessmentsCard({
 }) {
   const submitted = assessments.selfAssessmentScore !== null;
 
+  // These mirror the base. `FSM Assessment Status` and `Self Assessment Sent`
+  // record what was actually dispatched, so the page reports that rather than
+  // re-deriving eligibility: a pro holding the email should not be told the
+  // form does not exist. Whether the form is *offered* is a separate question,
+  // decided by the prerequisite gate in server/lib/nextAction.ts.
+  //
   // "Not yet due" is a forward-looking claim, and false for someone who has
-  // left the programme with no event on file. Observed on a Historical pro.
+  // left the program with no event on file. Observed on a Historical pro.
   const selfValue = submitted ? 'Submitted' : assessments.selfAssessmentDue ? 'Due' : finished ? 'No record' : 'Not yet due';
   const fsmValue = assessments.fsmAssessmentStatus || (finished ? 'No record' : 'Not started');
 
@@ -323,15 +329,15 @@ function WorkOrdersCard({
 }) {
   // `shortfall` is null once the minimums are met — the endpoint normalises the
   // "None" the Airtable field reads in that case, and suppresses it entirely
-  // for a pro who has left the programme.
+  // for a pro who has left the program.
   const met = !workOrders.shortfall;
   return (
     <StatusCard
       label="Work order experience"
-      value={finished ? 'Programme complete' : met ? 'Minimums met' : 'In progress'}
+      value={finished ? 'Program complete' : met ? 'Minimums met' : 'In progress'}
       tone={finished ? 'neutral' : met ? 'good' : 'info'}
       // Only the shortfall is kept: it is a number the pro has to act on.
-      // "Minimums met" and "Programme complete" already say it in the value.
+      // "Minimums met" and "Program complete" already say it in the value.
       note={finished || met ? undefined : `You still need ${workOrders.shortfall} work orders logged.`}
     >
       <dl className="mt-2 grid grid-cols-3 gap-2 text-center">

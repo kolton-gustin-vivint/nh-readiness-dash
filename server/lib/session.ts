@@ -26,7 +26,18 @@
  * record.
  */
 import { getSession as magistrateGetSession } from '@FO-Enablement-Vivint/magistrate/next';
+import { cookies } from 'next/headers';
 import { env } from './env';
+
+/**
+ * TEMPORARY — the "Preview as" cookie. Delete with the box; see
+ * src/components/PreviewAs.tsx for the full removal list.
+ *
+ * It is a cookie rather than a URL parameter because the page's data arrives
+ * via POST /api/* calls, which carry no query string, and because endpoints
+ * deliberately refuse a pro id from the client (see server/lib/endpoint.ts).
+ */
+export const PREVIEW_AS_COOKIE = 'preview_as';
 
 /**
  * The subset of Magistrate's session this app uses.
@@ -59,6 +70,14 @@ export interface Session {
 export async function getSession(): Promise<Session | null> {
   // Local overrides, impossible in production.
   if (!env.isProd) {
+    // TEMPORARY: the "Preview as" box. Checked before the env overrides so a
+    // selection in the box beats whatever DEV_USER_* is sitting in .env —
+    // otherwise the box would appear to do nothing. Delete with the box.
+    const previewAs = (await cookies()).get(PREVIEW_AS_COOKIE)?.value?.trim();
+    if (previewAs && /^rec[A-Za-z0-9]{14}$/.test(previewAs)) {
+      return { email: '', recordId: previewAs };
+    }
+
     const recordId = env.devUserRecordId.trim();
     if (recordId) return { email: '', recordId };
 
@@ -77,6 +96,8 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /** True when a local override is standing in for a real session. */
-export function isDevIdentity(): boolean {
-  return !env.isProd && Boolean(env.devUserRecordId.trim() || env.devUserEmail.trim());
+export async function isDevIdentity(): Promise<boolean> {
+  if (env.isProd) return false;
+  const previewAs = (await cookies()).get(PREVIEW_AS_COOKIE)?.value?.trim();
+  return Boolean(previewAs || env.devUserRecordId.trim() || env.devUserEmail.trim());
 }

@@ -1,6 +1,6 @@
 # nh-readiness-portal
 
-The New Hire **"My Readiness"** page for the New Hire Readiness programme —
+The New Hire **"My Readiness"** page for the New Hire Readiness program —
 a mobile-first web app over Airtable base `app3hcKv9U98zhjNt`.
 
 Built as an app rather than an Airtable interface for two reasons:

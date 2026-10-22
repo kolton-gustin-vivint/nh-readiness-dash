@@ -23,7 +23,7 @@
 import { z } from 'zod';
 import { createEndpoint } from '../lib/endpoint';
 import { ReadinessEvent, Licensing, FsmProgressCheckIn, RequiredCourses } from '../airtable/index';
-import { cleanNumber, firstNumber, firstString, formatDate, shortfallText, stringList, toStage } from '../lib/readiness';
+import { cleanNumber, firstFlag, firstNumber, firstString, formatDate, shortfallText, stringList, toStage } from '../lib/readiness';
 import { resolveNextAction } from '../lib/nextAction';
 
 /**
@@ -63,7 +63,7 @@ const outputSchema = z.object({
   programWeek: z.string().nullable(),
   daysInTraining: z.number().nullable(),
   stage: z.object({ label: z.string(), index: z.number().nullable() }),
-  /** True once the pro has left the programme, so the UI stops nagging them. */
+  /** True once the pro has left the program, so the UI stops nagging them. */
   finished: z.boolean(),
   /** True before the hire date, when week and day counts are not yet meaningful. */
   notStarted: z.boolean(),
@@ -159,13 +159,36 @@ export default createEndpoint({
     const isTrainingRequired = decision === 'Training Required' || firstString(event?.eventStatus) === 'Training Required';
 
     const selfAssessmentScore = firstNumber(event?.nhOverallScore);
-    const awaitingReassessment = Boolean(firstString(event?.nhAwaitingReassessment));
+    // `NH Awaiting Reassessment` is a lookup of a checkbox, so an unchecked
+    // one arrives as `[0]`. firstFlag reads that as false; Boolean(firstString)
+    // read it as true and told pros a reassessment was coming when it was not.
+    const awaitingReassessment = firstFlag(event?.nhAwaitingReassessment);
     const trainingComplete = firstString(me.newHireTrainingComplete);
     // Null once the minimums are met. The field reads "None", not blank.
     const woShortfall = shortfallText(me.woExperienceGate);
     const requiredActions = firstString(event?.trRequiredActions);
     const reassessmentDate = formatDate(event?.trReassessmentDateEmail);
     const selfAssessmentDue = formatDate(me.selfAssessmentDue);
+
+    // Prerequisites for the self-assessment form, per Austi: Ethics and
+    // Compliance complete, ProStart complete, and the install/service
+    // minimums met. The FSM readiness check carries the same prerequisites.
+    //
+    // These gate whether the form is OFFERED, not what the cards report. The
+    // cards mirror the base, because `Self Assessment Sent` and `FSM
+    // Assessment Sent Date` record real dispatches — and the base does send
+    // early: Tyler Livingston was sent both at 2 install / 1 service, and
+    // Kolton Gustin at 0 / 0. That is an upstream problem to fix in Airtable,
+    // not something to paper over by denying the email exists.
+    //
+    // Built from the per-family course state rather than `New Hire Training
+    // Complete`, which also counts Quarterly Safety Training — a third family
+    // that is not a prerequisite.
+    const selfAssessmentBlockers: string[] = [];
+    if (!courses.ethics.complete) selfAssessmentBlockers.push('Ethics and Compliance courses');
+    if (!courses.prostart.complete) selfAssessmentBlockers.push('ProStart courses');
+    if (woShortfall) selfAssessmentBlockers.push('work order minimums');
+    const selfAssessmentUnlocked = selfAssessmentBlockers.length === 0;
     const stage = toStage(me.newHireStatus);
     const finished = stage.label === 'Historical';
     // `Days In Training` counts from HIRE_DATE, so a pro whose start date is in
@@ -181,6 +204,7 @@ export default createEndpoint({
       selfAssessmentDue,
       selfAssessmentLink: firstString(me.nhSelfAssessmentLink),
       selfAssessmentScore,
+      selfAssessmentUnlocked,
       awaitingReassessment,
       reassessmentForm: firstString(event?.nhReassessmentForm),
       reassessmentCategories: stringList(event?.nhCategoriesAssigned),
@@ -195,8 +219,8 @@ export default createEndpoint({
 
     return {
       name: firstString(me.preferredFullName) || firstString(me.legalFullName),
-      // Programme week and days-in-training are meaningless once someone has
-      // left the programme: `Current Program Week` just keeps counting from
+      // Program week and days-in-training are meaningless once someone has
+      // left the program: `Current Program Week` just keeps counting from
       // the hire date, so a Historical pro reads "Week 153". They are equally
       // meaningless before the start date.
       programWeek: finished || notStarted ? null : programWeek(me.currentProgramWeek),
@@ -226,7 +250,7 @@ export default createEndpoint({
         service: cleanNumber(me.serviceWosComplete),
         total: cleanNumber(me.totalWos),
         // Null once the minimums are met. Also suppressed for a pro who has
-        // left the programme, where the gate keeps reporting a shortfall
+        // left the program, where the gate keeps reporting a shortfall
         // against minimums that no longer apply to them.
         shortfall: finished ? null : woShortfall,
       },
@@ -278,7 +302,7 @@ async function latestEvent(ids: string[]) {
 
 /**
  * `Current Program Week` is a bare number, so it renders as "3" on its own.
- * Governance §1 talks in programme weeks, and Austi's definition has week 1 as
+ * Governance §1 talks in program weeks, and Austi's definition has week 1 as
  * the partial week containing the hire date.
  */
 function programWeek(v: unknown): string | null {
@@ -351,7 +375,7 @@ async function licenceRows(ids: string[]) {  if (!ids.length) return [];
  * concerns, confidence rating and rating explanation. §9 does not list the
  * check-in in its matrix, so the conservative reading is taken: only the
  * forward-looking focus fields the interface requirement names are read, and
- * the FSM's assessment of the pro is not. Widening this is a programme
+ * the FSM's assessment of the pro is not. Widening this is a program
  * decision for Austi, not a layout one.
  */
 async function latestCheckIn(ids: string[]) {

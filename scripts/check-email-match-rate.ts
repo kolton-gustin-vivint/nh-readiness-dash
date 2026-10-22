@@ -23,7 +23,7 @@ async function main() {
 
   for (let page = 0; page < 60; page++) {
     const res = await FieldOpsEml20.findAll({
-      // Everyone the programme currently applies to. A Historical pro still
+      // Everyone the program currently applies to. A Historical pro still
       // needs access per §8 retention, but they are not the go-live risk.
       filters: { empStatus: 'Training' },
       fields: ['workEmail', 'preferredFullName', 'legalFullName', 'newHireStatus'],

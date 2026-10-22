@@ -6,7 +6,7 @@
  * work independently": a pro needs to see where the stage sits in the
  * sequence, not just its name.
  *
- * `Historical` is the end state for someone who has left the programme, so it
+ * `Historical` is the end state for someone who has left the program, so it
  * is rendered as the final step rather than as a separate state.
  */
 const STAGES = ['Training', 'Readiness Review', 'Additional Training Required', 'Graduating', 'Historical'];

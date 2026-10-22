@@ -49,6 +49,33 @@ export function firstString(v: unknown): string | null {
   return s === '' ? null : s;
 }
 
+/**
+ * Boolean reading of a checkbox, or of a lookup/rollup of one.
+ *
+ * Do NOT use `Boolean(firstString(v))` for these. A lookup of an unchecked
+ * checkbox comes back as `[0]` — a non-empty array holding zero — so
+ * `firstString` yields the string "0", and `Boolean("0")` is `true`. That
+ * inverts the field: every pro whose flag was *off* read as *on*. Observed on
+ * `NH Awaiting Reassessment`, where it told pros a reassessment was coming
+ * when the flag was 0.
+ *
+ * Numbers, numeric strings, real booleans and the strings "true"/"false" are
+ * all handled; anything unrecognised is false rather than truthy-by-accident.
+ */
+export function firstFlag(v: unknown): boolean {
+  const raw = Array.isArray(v) ? (v.length ? v[0] : null) : v;
+  if (raw === null || raw === undefined || raw === '') return false;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'number') return raw !== 0;
+
+  const s = String(raw).trim().toLowerCase();
+  if (s === '' || s === '0' || s === 'false' || s === 'no') return false;
+  if (s === '1' || s === 'true' || s === 'yes' || s === 'checked') return true;
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n !== 0 : false;
+}
+
 /** Flattens a multi-value field to a clean string array. */
 export function stringList(v: unknown): string[] {
   if (v === null || v === undefined) return [];
@@ -112,7 +139,7 @@ export function formatDate(v: unknown): string | null {
   });
 }
 
-/** Readiness stages, in programme order, for rendering a progress rail. */
+/** Readiness stages, in program order, for rendering a progress rail. */
 export const READINESS_STAGES = [
   'Training',
   'Readiness Review',

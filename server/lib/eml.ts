@@ -91,7 +91,7 @@ const RESERVED = new Set(['id', 'email', 'roles']);
  *
  * Refuses anyone whose session email matches no EML row. It deliberately does
  * NOT refuse on `EMP_STATUS` or `New Hire Status`: a pro who has finished the
- * programme still needs to see their own record, and the doc's §8 retention
+ * program still needs to see their own record, and the doc's §8 retention
  * rule keeps readiness records available after they reach Historical.
  */
 export async function requireNewHire(session: Session): Promise<RequestUser> {
