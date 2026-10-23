@@ -84,6 +84,7 @@ export default function MyReadiness() {
 
       <SectionHeading>My progress</SectionHeading>
 
+      <LicensingCard licensing={readiness.licensing} />
       <CoursesCards courses={readiness.courses} />
       <AssessmentsCard
         assessments={readiness.assessments}
@@ -145,11 +146,6 @@ export default function MyReadiness() {
           </Card>
         </>
       ) : null}
-
-      {/* Last, deliberately. Licensing is not a readiness requirement (see
-          LicensingCard), and two thirds of pros have no record, so it would
-          otherwise lead the page with a grey "Not on file" that means nothing. */}
-      <LicensingCard licensing={readiness.licensing} />
 
       <ActionBar action={readiness.nextAction} />
     </Shell>

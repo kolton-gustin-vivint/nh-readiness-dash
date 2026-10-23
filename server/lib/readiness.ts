@@ -139,16 +139,32 @@ export function formatDate(v: unknown): string | null {
   });
 }
 
-/** Readiness stages, in program order, for rendering a progress rail. */
+/**
+ * Readiness stages, in program order, for rendering a progress rail.
+ *
+ * These must match the values `New Hire Status` can return exactly — a label
+ * that does not match gets `index: null` and renders with no rail at all.
+ *
+ * `Historical` is deliberately NOT a rail step. It is the end state for a pro
+ * who has left the program, which is not a further point of progress than
+ * `Graduated`; it renders as a label-only card via the `index: null` path.
+ */
 export const READINESS_STAGES = [
   'Training',
   'Readiness Review',
   'Additional Training Required',
-  'Graduating',
-  'Historical',
+  'Graduated',
 ] as const;
 
 export type ReadinessStage = (typeof READINESS_STAGES)[number];
+
+/** Short rail labels — the full status names do not fit a phone width. */
+export const STAGE_SHORT_LABELS: Record<ReadinessStage, string> = {
+  Training: 'Training',
+  'Readiness Review': 'Review',
+  'Additional Training Required': 'Additional Training',
+  Graduated: 'Graduated',
+};
 
 /** Maps a `New Hire Status` value onto a stage, tolerating an unknown string. */
 export function toStage(value: unknown): { label: string; index: number | null } {
