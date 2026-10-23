@@ -306,8 +306,8 @@ function AssessmentsCard({
         />
         {event ? (
           <Row
-            term="Current cycle"
-            value={event.label || (event.cycle !== null ? `Cycle ${event.cycle}` : EMPTY)}
+            term="Current round"
+            value={event.label || (event.round !== null ? `Round ${event.round}` : EMPTY)}
             detail={event.status}
           />
         ) : null}

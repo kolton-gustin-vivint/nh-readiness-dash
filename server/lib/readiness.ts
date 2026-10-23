@@ -119,7 +119,7 @@ export function shortfallText(v: unknown): string | null {
  *
  * Parsed as UTC deliberately: `new Date('2026-10-21')` is midnight UTC, and
  * formatting that in a negative-offset timezone renders the 20th. Same class
- * of bug as the `SET_TIMEZONE` fix on `Cycle Label`.
+ * of bug as the `SET_TIMEZONE` fix on `Round Label`.
  */
 export function formatDate(v: unknown): string | null {
   const s = firstString(v);

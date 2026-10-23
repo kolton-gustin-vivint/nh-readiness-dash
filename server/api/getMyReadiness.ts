@@ -33,8 +33,8 @@ import { resolveNextAction } from '../lib/nextAction';
 const EVENT_FIELDS = [
   'eventStatus',
   'readinessDecision',
-  'cycle',
-  'cycleLabel',
+  'round',
+  'roundLabel',
   'eventOpen',
   'nhOverallScore',
   'trDevelopmentFocus',
@@ -118,7 +118,7 @@ const outputSchema = z.object({
     .object({
       status: z.string().nullable(),
       decision: z.string().nullable(),
-      cycle: z.number().nullable(),
+      round: z.number().nullable(),
       label: z.string().nullable(),
       awaitingReassessment: z.boolean(),
     })
@@ -270,8 +270,8 @@ export default createEndpoint({
         ? {
             status: firstString(event.eventStatus),
             decision,
-            cycle: cleanNumber(event.cycle),
-            label: firstString(event.cycleLabel),
+            round: cleanNumber(event.round),
+            label: firstString(event.roundLabel),
             awaitingReassessment,
           }
         : null,
@@ -284,8 +284,8 @@ export default createEndpoint({
 /**
  * The pro's most recent event.
  *
- * Sorted on `Cycle` descending rather than on a date, because a reassessment
- * opens a new event and the cycle number is the only field guaranteed to
+ * Sorted on `Round` descending rather than on a date, because a reassessment
+ * opens a new event and the round number is the only field guaranteed to
  * order them. A pro with no event at all is a normal state — someone in their
  * first weeks — and returns null rather than erroring.
  */
@@ -294,7 +294,7 @@ async function latestEvent(ids: string[]) {
   const page = await ReadinessEvent.findAll({
     filters: { id: { in: ids } },
     fields: [...EVENT_FIELDS],
-    sort: [{ field: 'cycle', direction: 'desc' }],
+    sort: [{ field: 'round', direction: 'desc' }],
     limit: 1,
   });
   return page.records[0] ?? null;

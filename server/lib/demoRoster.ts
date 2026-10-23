@@ -28,7 +28,7 @@ export interface RosterEntry {
   name: string;
   stage: string | null;
   empStatus: string | null;
-  /** Distinct event statuses across the pro's cycles, newest cycle first. */
+  /** Distinct event statuses across the pro's rounds, newest round first. */
   eventStatuses: string[];
   coursesLeft: number | null;
   /** Null once the install/service minimums are met. */
@@ -43,16 +43,16 @@ export async function loadDemoRoster(): Promise<RosterEntry[]> {
   // Events first: the roster is "pros with something to show", and a pro with
   // no event has no readiness state worth switching to.
   const events = await ReadinessEvent.findAll({
-    fields: ['newHire', 'eventStatus', 'cycle'],
+    fields: ['newHire', 'eventStatus', 'round'],
     limit: 100,
   });
 
-  const byPro = new Map<string, Array<{ status: string | null; cycle: number | null }>>();
+  const byPro = new Map<string, Array<{ status: string | null; round: number | null }>>();
   for (const e of events.records) {
     const proId = firstString(e.newHire);
     if (!proId) continue;
     const list = byPro.get(proId) ?? [];
-    list.push({ status: firstString(e.eventStatus), cycle: firstNumber(e.cycle) });
+    list.push({ status: firstString(e.eventStatus), round: firstNumber(e.round) });
     byPro.set(proId, list);
   }
 
@@ -75,9 +75,9 @@ export async function loadDemoRoster(): Promise<RosterEntry[]> {
   });
 
   const entries: RosterEntry[] = pros.records.map(p => {
-    const cycles = (byPro.get(p.id) ?? []).sort((a, b) => (b.cycle ?? 0) - (a.cycle ?? 0));
+    const rounds = (byPro.get(p.id) ?? []).sort((a, b) => (b.round ?? 0) - (a.round ?? 0));
     const statuses: string[] = [];
-    for (const c of cycles) {
+    for (const c of rounds) {
       if (c.status && !statuses.includes(c.status)) statuses.push(c.status);
     }
 

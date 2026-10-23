@@ -81,7 +81,7 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
   //
   //    Gated on not being approved. Daniel Loan is live evidence that an event
   //    can read `Approved` while `NH Awaiting Reassessment` is still true —
-  //    he was approved on cycle 2 via the Alignment route with a reassessment
+  //    he was approved on round 2 via the Alignment route with a reassessment
   //    outstanding. Telling an approved pro to go and reassess themselves is
   //    worse than saying nothing, so approval wins. The underlying
   //    contradiction is an open question for the Airtable build, not something
@@ -90,7 +90,7 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
     const categories = i.reassessmentCategories;
     const what = categories.length ? joinWords(categories) : 'part of your self-assessment';
 
-    // No form link means the prefill could not be built — cycle 1 events carry
+    // No form link means the prefill could not be built — round 1 events carry
     // no reassessment URL. Say who to expect it from rather than rendering a
     // button that goes nowhere.
     if (!i.reassessmentForm) {
