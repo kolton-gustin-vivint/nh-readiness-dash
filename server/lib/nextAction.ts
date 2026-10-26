@@ -49,9 +49,11 @@ export interface NextActionInput {
    * program week alone, so it reads "due" for a pro who cannot yet submit.
    * Offering the link anyway sends them to a form they are not eligible for.
    *
-   * Derived from the per-family course state rather than `New Hire Training
-   * Complete`, because that field also counts a third family (Quarterly
-   * Safety Training) which is not one of the two prerequisites.
+   * Derived from `New Hire Training Complete` plus the work-order gate. That
+   * formula is the source of truth for the learning half — not every course
+   * linked to a pro is required, so the outstanding per-family course titles
+   * are not a substitute for it. See the derivation in
+   * server/api/getMyReadiness.ts.
    */
   selfAssessmentUnlocked: boolean;
   awaitingReassessment: boolean;
@@ -82,19 +84,6 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
 
   const approved = i.decision === 'Approved' || i.eventStatus === 'Approved';
 
-  // Is the pro in a reassessment, rather than their first self-assessment?
-  //
-  // `NH Awaiting Reassessment` cannot be the only signal: it reads blank on
-  // live round-2 events (Phillip Daigre, Tyler Livingston and Brandon
-  // Murakami, all "Round 2 - 10/19/26"). With only that flag, step 1 was
-  // skipped and step 2 fired instead — handing a pro mid-reassessment the
-  // round-1 `new-hire-self-assessment` link, which is a different form.
-  //
-  // So a round past the first, or an event that says so outright, also counts.
-  // `selfAssessmentScore` is read from the CURRENT event, so it is null again
-  // on a freshly opened round and non-null once the reassessment is in — which
-  // makes it the test for "not yet submitted" and stops this from re-firing
-  // after the pro has completed it.
   const reassessmentRound = (i.round ?? 1) > 1 || i.eventStatus === 'Awaiting Reassessment';
   const inReassessment = i.awaitingReassessment || (reassessmentRound && i.selfAssessmentScore === null);
 

@@ -170,9 +170,17 @@ export default createEndpoint({
     const reassessmentDate = formatDate(event?.trReassessmentDateEmail);
     const selfAssessmentDue = formatDate(me.selfAssessmentDue);
 
-    // Prerequisites for the self-assessment form, per Austi: Ethics and
-    // Compliance complete, ProStart complete, and the install/service
-    // minimums met. The FSM readiness check carries the same prerequisites.
+    // Prerequisites for the self-assessment form, per Austi: required learning
+    // complete, and the install/service minimums met. The FSM readiness check
+    // carries the same prerequisites.
+    //
+    // `New Hire Training Complete` is the source of truth for the learning
+    // half. Not every course linked to a pro is required, so the outstanding
+    // per-family titles cannot stand in for it: Ben Barker has an outstanding
+    // `ProStart | Feedback` that is not required, and deriving the gate from
+    // those titles locked him out of a self-assessment he was eligible for —
+    // leaving him with no action at all, since the work-order and remediation
+    // steps did not apply either.
     //
     // These gate whether the form is OFFERED, not what the cards report. The
     // cards mirror the base, because `Self Assessment Sent` and `FSM
@@ -180,13 +188,10 @@ export default createEndpoint({
     // early: Tyler Livingston was sent both at 2 install / 1 service, and
     // Kolton Gustin at 0 / 0. That is an upstream problem to fix in Airtable,
     // not something to paper over by denying the email exists.
-    //
-    // Built from the per-family course state rather than `New Hire Training
-    // Complete`, which also counts Quarterly Safety Training — a third family
-    // that is not a prerequisite.
     const selfAssessmentBlockers: string[] = [];
-    if (!courses.ethics.complete) selfAssessmentBlockers.push('Ethics and Compliance courses');
-    if (!courses.prostart.complete) selfAssessmentBlockers.push('ProStart courses');
+    if (trainingComplete && trainingComplete !== 'Complete') {
+      selfAssessmentBlockers.push('required courses');
+    }
     if (woShortfall) selfAssessmentBlockers.push('work order minimums');
     const selfAssessmentUnlocked = selfAssessmentBlockers.length === 0;
     const stage = toStage(me.newHireStatus);
