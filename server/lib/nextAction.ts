@@ -12,7 +12,7 @@
  *
  * Precedence:
  *   0. Nothing, if the pro has left the program (Historical)
- *   1. A reassessment the pro has been assigned and not yet submitted
+ *   1. A reassessment the pro is in, and has not yet submitted
  *   2. The readiness self-assessment, once due AND once its prerequisites are met
  *   3. Logging a work order, while the experience minimums are unmet
  *   4. Nothing — approved, or waiting on someone else
@@ -58,6 +58,11 @@ export interface NextActionInput {
   reassessmentForm: string | null;
   reassessmentCategories: string[];
   eventStatus: string | null;
+  /**
+   * `Round` on the current event. Anything above 1 means the pro is in a
+   * reassessment, so the first-time self-assessment form must not be offered.
+   */
+  round: number | null;
   decision: string | null;
   requiredActions: string | null;
   reassessmentDate: string | null;
@@ -77,7 +82,23 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
 
   const approved = i.decision === 'Approved' || i.eventStatus === 'Approved';
 
-  // 1. Assigned a reassessment and it is still outstanding.
+  // Is the pro in a reassessment, rather than their first self-assessment?
+  //
+  // `NH Awaiting Reassessment` cannot be the only signal: it reads blank on
+  // live round-2 events (Phillip Daigre, Tyler Livingston and Brandon
+  // Murakami, all "Round 2 - 10/19/26"). With only that flag, step 1 was
+  // skipped and step 2 fired instead — handing a pro mid-reassessment the
+  // round-1 `new-hire-self-assessment` link, which is a different form.
+  //
+  // So a round past the first, or an event that says so outright, also counts.
+  // `selfAssessmentScore` is read from the CURRENT event, so it is null again
+  // on a freshly opened round and non-null once the reassessment is in — which
+  // makes it the test for "not yet submitted" and stops this from re-firing
+  // after the pro has completed it.
+  const reassessmentRound = (i.round ?? 1) > 1 || i.eventStatus === 'Awaiting Reassessment';
+  const inReassessment = i.awaitingReassessment || (reassessmentRound && i.selfAssessmentScore === null);
+
+  // 1. In a reassessment and it is still outstanding.
   //
   //    Gated on not being approved. Daniel Loan is live evidence that an event
   //    can read `Approved` while `NH Awaiting Reassessment` is still true —
@@ -86,14 +107,34 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
   //    worse than saying nothing, so approval wins. The underlying
   //    contradiction is an open question for the Airtable build, not something
   //    this page can resolve.
-  if (i.awaitingReassessment && !approved) {
+  if (inReassessment && !approved) {
     const categories = i.reassessmentCategories;
     const what = categories.length ? joinWords(categories) : 'part of your self-assessment';
 
-    // No form link means the prefill could not be built — round 1 events carry
-    // no reassessment URL. Say who to expect it from rather than rendering a
-    // button that goes nowhere.
     if (!i.reassessmentForm) {
+      // No NH form on an event that is still awaiting assessments means the
+      // round was opened for the FSM's side, not the pro's: the FSM is re-doing
+      // part of THEIR assessment. Live on Tyler Livingston — round 2,
+      // `Awaiting Assessments`, no `NH Reassessment Form`, no
+      // `NH Categories Assigned`, and an `FSM Reassessment Form` that is
+      // populated. Phillip Daigre is the contrast: same status, but a NH form
+      // and NH categories, so his is genuinely his to re-do.
+      //
+      // The old copy here said "Your FSM has asked you to re-do X", which told
+      // a pro with nothing assigned to them that they were on the hook.
+      if (i.eventStatus === 'Awaiting Assessments') {
+        return {
+          label: 'Your manager is finishing their assessment',
+          because:
+            'Your FSM is re-doing part of their readiness assessment. There is nothing for you to submit — you will hear from them once it is done.',
+          href: null,
+          due: i.reassessmentDate,
+        };
+      }
+
+      // Otherwise the pro's own form genuinely has not been built yet — round 1
+      // events carry no reassessment URL. Say who to expect it from rather than
+      // rendering a button that goes nowhere.
       return {
         label: 'A reassessment is coming',
         because: `Your FSM has asked you to re-do ${what}. They will send you the form.`,
@@ -120,7 +161,19 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
   //    with 3 of the 16 required work orders was handed the self-assessment
   //    link instead of being told to log work orders. Live on Tyler
   //    Livingston at 2 install / 1 service.
-  if (!approved && i.selfAssessmentDue && i.selfAssessmentUnlocked && i.selfAssessmentScore === null) {
+  //
+  //    `!reassessmentRound` is belt-and-braces. Step 1 already returns for
+  //    anyone in a reassessment, so this cannot be reached on a later round
+  //    today — but `Self Assessment Due` keeps returning a date across every
+  //    round, so if step 1's conditions ever narrow again this is the step
+  //    that would quietly serve the wrong form.
+  if (
+    !approved &&
+    !reassessmentRound &&
+    i.selfAssessmentDue &&
+    i.selfAssessmentUnlocked &&
+    i.selfAssessmentScore === null
+  ) {
     return {
       label: 'Complete your readiness self-assessment',
       because: 'You have reached the point in the program where you rate your own confidence.',

@@ -209,6 +209,7 @@ export default createEndpoint({
       reassessmentForm: firstString(event?.nhReassessmentForm),
       reassessmentCategories: stringList(event?.nhCategoriesAssigned),
       eventStatus: firstString(event?.eventStatus),
+      round: cleanNumber(event?.round),
       decision,
       requiredActions,
       reassessmentDate,
