@@ -23,8 +23,8 @@
 import { z } from 'zod';
 import { createEndpoint } from '../lib/endpoint';
 import { ReadinessEvent, Licensing, FsmProgressCheckIn, RequiredCourses } from '../airtable/index';
-import { cleanNumber, firstFlag, firstNumber, firstString, formatDate, shortfallText, stringList, toStage } from '../lib/readiness';
-import { resolveNextAction } from '../lib/nextAction';
+import { cleanNumber, firstFlag, firstNumber, firstString, formatDate, shortfallText, stringList, resolveStage } from '../lib/readiness';
+import { resolveNextAction, woFormHref } from '../lib/nextAction';
 
 /**
  * The only Readiness Event fields this app may read. Keys, not Airtable names
@@ -93,6 +93,8 @@ const outputSchema = z.object({
     service: z.number().nullable(),
     total: z.number().nullable(),
     shortfall: z.string().nullable(),
+    /** Standing link to the WO form, independent of the one-action rule. Null once the pro has left the program. */
+    logHref: z.string().nullable(),
   }),
 
   focusThisWeek: z
@@ -194,7 +196,9 @@ export default createEndpoint({
     }
     if (woShortfall) selfAssessmentBlockers.push('work order minimums');
     const selfAssessmentUnlocked = selfAssessmentBlockers.length === 0;
-    const stage = toStage(me.newHireStatus);
+    const stage = resolveStage(me.newHireStatus, event
+      ? { eventStatus: firstString(event.eventStatus), round: cleanNumber(event.round) }
+      : null);
     const finished = stage.label === 'Historical';
     // `Days In Training` counts from HIRE_DATE, so a pro whose start date is in
     // the future reads a negative number — live on an `EMP_STATUS = Hired Not
@@ -259,6 +263,7 @@ export default createEndpoint({
         // left the program, where the gate keeps reporting a shortfall
         // against minimums that no longer apply to them.
         shortfall: finished ? null : woShortfall,
+        logHref: finished ? null : woFormHref(process.env.WO_EXPERIENCE_FORM_URL || null, me.id),
       },
 
       focusThisWeek: checkIn,

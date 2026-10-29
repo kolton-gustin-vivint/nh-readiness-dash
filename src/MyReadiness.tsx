@@ -36,16 +36,22 @@ export default function MyReadiness() {
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [experience, setExperience] = useState<Experience | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [experienceFailed, setExperienceFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [r, e] = await Promise.all([getMyReadiness({}), getMyFieldExperience({})]);
+        // Independent: a failure in field experience must not take the whole
+        // page down with it. Readiness failing is still fatal — it carries the
+        // identity gate and the next action.
+        const [r, e] = await Promise.allSettled([getMyReadiness({}), getMyFieldExperience({})]);
         if (cancelled) return;
-        setReadiness(r);
-        setExperience(e);
+        if (r.status === 'rejected') throw r.reason;
+        setReadiness(r.value);
+        if (e.status === 'fulfilled') setExperience(e.value);
+        else setExperienceFailed(true);
       } catch (err) {
         if (cancelled) return;
         // A 401 (no session) and a 403 (session with no matching EML record)
@@ -68,16 +74,10 @@ export default function MyReadiness() {
   return (
     <Shell>
       <header className="px-1 pt-1">
-        <h1 className="text-xl font-semibold text-slate-900">{readiness.name || 'My Readiness'}</h1>
-        <p className="text-sm text-slate-500">
-          {readiness.finished
-            ? 'Training complete'
-            : readiness.notStarted
-              ? 'Starting soon'
-              : `${readiness.programWeek || 'In training'}${
-                  readiness.daysInTraining !== null ? ` · day ${readiness.daysInTraining}` : ''
-                }`}
-        </p>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">{readiness.name || 'My Readiness'}</h1>
+        {readiness.finished || readiness.notStarted ? (
+          <p className="text-sm text-slate-500">{readiness.finished ? 'Training complete' : 'Starting soon'}</p>
+        ) : null}
       </header>
 
       <StageRail label={readiness.stage.label} index={readiness.stage.index} />
@@ -143,6 +143,15 @@ export default function MyReadiness() {
                   : undefined
               }
             />
+          </Card>
+        </>
+      ) : experienceFailed ? (
+        <>
+          <SectionHeading>My field experience</SectionHeading>
+          <Card>
+            <p className="text-sm leading-relaxed text-slate-700">
+              Your field experience could not be loaded right now. The rest of this page is up to date — try again shortly.
+            </p>
           </Card>
         </>
       ) : null}
@@ -341,6 +350,16 @@ function WorkOrdersCard({
         <Stat label="Service" value={workOrders.service} />
         <Stat label="Total" value={workOrders.total} />
       </dl>
+      {workOrders.logHref ? (
+        <a
+          href={workOrders.logHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 block rounded-xl border border-emerald-600 px-3 py-2 text-center text-sm font-medium text-emerald-700 active:bg-emerald-50"
+        >
+          Log a work order
+        </a>
+      ) : null}
     </StatusCard>
   );
 }

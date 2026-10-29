@@ -212,7 +212,7 @@ export function resolveNextAction(i: NextActionInput): NextAction | null {
  * form, so the base URL comes from the environment. Returns null when it is
  * unset rather than rendering a dead button.
  */
-function woFormHref(base: string | null, proRecordId: string): string | null {
+export function woFormHref(base: string | null, proRecordId: string): string | null {
   if (!base) return null;
   const sep = base.includes('?') ? '&' : '?';
   return `${base}${sep}pro=${encodeURIComponent(proRecordId)}`;

@@ -77,7 +77,7 @@ export default createEndpoint({
 
     const jobTypes = tally(rows.map(r => firstString(r.jobType)));
     const areas = tally(rows.flatMap(r => expandAreas(r)));
-    const trainedWith = tally(rows.map(r => firstString(r.shadowedName) || firstString(r.shadowedFullName)));
+    const trainedWith = tally(rows.map(r => firstString(r.shadowedName)));
 
     return {
       totalWorkOrders: rows.length,
@@ -112,7 +112,6 @@ async function allWoRows(proRecordId: string) {
         'otherExperienceAreas',
         'personShadowed',
         'shadowedName',
-        'shadowedFullName',
         'highestParticipation',
         'participationRank',
         'workOrderDate',

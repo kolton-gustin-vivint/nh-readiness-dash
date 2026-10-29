@@ -166,6 +166,39 @@ export const STAGE_SHORT_LABELS: Record<ReadinessStage, string> = {
   Graduated: 'Graduated',
 };
 
+/**
+ * The stage the rail should show. The readiness event is the record of where
+ * the pro actually is; `New Hire Status` only advances once the course and
+ * work-order gate is met, so it reads "Training" for a pro whose event is
+ * already approved or in reassessment (live on Daniel Loan: Approved, shown as
+ * Training). The event wins when there is one; otherwise fall back to
+ * `New Hire Status`. `Historical` always wins — a pro who has left the program
+ * is not shown a stage.
+ */
+export function resolveStage(
+  newHireStatus: unknown,
+  event: { eventStatus: string | null; round: number | null } | null,
+): { label: string; index: number | null } {
+  const base = firstString(newHireStatus);
+  if (base === 'Historical' || !event?.eventStatus) return toStage(base);
+
+  switch (event.eventStatus) {
+    case 'Approved':
+      return toStage('Graduated');
+    case 'Training Required':
+    case 'Awaiting Reassessment':
+      return toStage('Additional Training Required');
+    case 'In Review':
+      return toStage('Readiness Review');
+    case 'Awaiting Assessments':
+      // Round 1: the review has started. Later rounds: the pro is in
+      // reassessment after an earlier Training Required.
+      return toStage((event.round ?? 1) > 1 ? 'Additional Training Required' : 'Readiness Review');
+    default:
+      return toStage(base);
+  }
+}
+
 /** Maps a `New Hire Status` value onto a stage, tolerating an unknown string. */
 export function toStage(value: unknown): { label: string; index: number | null } {
   const label = firstString(value) || 'Training';
